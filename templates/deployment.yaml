@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mailhog-stunnel.fullname" . }}
+  labels:
+    {{- include "mailhog-stunnel.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "mailhog-stunnel.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "mailhog-stunnel.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "mailhog-stunnel.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: mailhog
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.images.mailhog.repository }}:{{ .Values.images.mailhog.tag }}"
+          imagePullPolicy: {{ .Values.images.mailhog.pullPolicy }}
+          ports:
+          - containerPort: {{ .Values.mailhog.service.http}}
+            name: http
+            protocol: TCP
+          - containerPort: {{ .Values.mailhog.service.smtp}}
+            name: tcp-smtp
+            protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            {{- toYaml .Values.mailhog.resources | nindent 12 }}
+        - name: stunnel
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.images.stunnel.repository }}:{{ .Values.images.stunnel.tag }}"
+          imagePullPolicy: {{ .Values.images.stunnel.pullPolicy }}
+          ports:
+            - name: tls-smtp
+              containerPort: {{ .Values.stunnel.service.port }}
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.stunnel.resources | nindent 12 }}
+          env:
+          - name: STUNNEL_SERVICE
+            value: "smtps"
+          - name: STUNNEL_ACCEPT
+            value: "{{ .Values.stunnel.service.port }}"
+          - name: STUNNEL_CONNECT
+            value: "{{ include "mailhog-stunnel.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:1025"
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
