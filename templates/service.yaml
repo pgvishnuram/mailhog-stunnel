@@ -1,3 +1,6 @@
+#############################################
+#         MailHog Stunnel Service           #
+#############################################
 apiVersion: v1
 kind: Service
 metadata:
@@ -15,7 +18,7 @@ spec:
       targetPort: tcp-smtp
       protocol: TCP
       name: smtp
-    - port: {{ .Values.mailhog.service.port }}
+    - port: {{ .Values.stunnel.service.port }}
       targetPort: tls-smtp
       protocol: TCP
       name: tls-smtp
