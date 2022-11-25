@@ -15,5 +15,9 @@ spec:
       targetPort: tcp-smtp
       protocol: TCP
       name: smtp
+    - port: {{ .Values.mailhog.service.port }}
+      targetPort: tls-smtp
+      protocol: TCP
+      name: tls-smtp
   selector:
     {{- include "mailhog-stunnel.selectorLabels" . | nindent 4 }}
